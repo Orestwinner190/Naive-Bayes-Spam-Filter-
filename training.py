@@ -9,15 +9,6 @@ spam_folder = "datasets/spams-data"
 ham_files = [os.path.join(ham_folder, f) for f in os.listdir(ham_folder) if f.endswith(".txt")]
 spam_files = [os.path.join(spam_folder, f) for f in os.listdir(spam_folder) if f.endswith(".txt")]
 
-STOPWORDS = {
-    "the","is","a","an","to","of","and","for","in","on","with","that","this",
-    "it","you","your","we","our","be","are","was","were","as","at","by","from",
-    "or","but","if","then","than","so","because","about","into","over","after",
-    "before","between","during","without","within","also","can","will","just",
-    "do","does","did","done","have","has","had","having","i","me","my","mine",
-    "he","him","his","she","her","they","them","their","theirs"
-}
-
 
 class EmailTrainer:
     def __init__(self, file_paths):
@@ -89,6 +80,16 @@ class EmailTrainer:
 
         return merged
 
+    def add_bigrams(self, tokens):
+
+        bigrams = []
+
+        for i in range(len(tokens) - 1):
+            bigram = tokens[i] + "_" + tokens[i + 1]
+            bigrams.append(bigram)
+
+        return tokens + bigrams
+
     # ----------------------------
     # Tokenization pipeline
     # ----------------------------
@@ -110,9 +111,10 @@ class EmailTrainer:
             tokens = re.findall(token_pattern, email)
 
             tokens = [self.normalize_word(t) for t in tokens]
-            tokens = [t for t in tokens if t not in STOPWORDS]
 
             tokens = self.merge_letter_sequences(tokens)
+
+            tokens = self.add_bigrams(tokens)
 
             self.tokens.append(tokens)
 

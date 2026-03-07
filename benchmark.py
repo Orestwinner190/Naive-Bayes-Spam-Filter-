@@ -2,6 +2,8 @@ import os
 import re
 import json
 
+
+
 # -----------------------------
 # LOAD MODEL
 # -----------------------------
@@ -105,6 +107,15 @@ def merge_letter_sequences(tokens):
 
     return merged
 
+def add_bigrams(tokens):
+
+    bigrams = []
+
+    for i in range(len(tokens) - 1):
+        bigram = tokens[i] + "_" + tokens[i+1]
+        bigrams.append(bigram)
+
+    return tokens + bigrams
 
 # -----------------------------
 # TOKENIZATION PIPELINE
@@ -125,6 +136,8 @@ def tokenize_email(email):
     tokens = [normalize_word(t) for t in tokens]
 
     tokens = merge_letter_sequences(tokens)
+
+    tokens = add_bigrams(tokens)
 
     return tokens
 
