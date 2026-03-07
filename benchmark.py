@@ -31,21 +31,27 @@ true_labels = []
 for file_path in benchmark_files:
     with open(file_path, "r", encoding="latin-1") as f:
 
-        for line in f:
+        for i, line in enumerate(f):
 
             line = line.strip()
             if not line:
                 continue
 
-            if " " in line:
-                email_text, label = line.rsplit(" ", 1)
+            # Skip header row
+            if i == 0 and line.lower().startswith("email"):
+                continue
 
-                emails.append(email_text.strip())
-                true_labels.append(label.strip())
+            parts = re.split(r"\s+", line)
 
-            else:
-                emails.append(line)
-                true_labels.append("0")
+            label = parts[-1]
+
+            if label not in {"0", "1"}:
+                raise ValueError(f"Invalid label detected: {line}")
+
+            email_text = " ".join(parts[:-1])
+
+            emails.append(email_text)
+            true_labels.append(label)
 
 # -----------------------------
 # NORMALIZATION
@@ -146,6 +152,11 @@ def predict_email(tokens):
 # -----------------------------
 correct = 0
 
+tp = 0  # spam correctly detected
+tn = 0  # ham correctly detected
+fp = 0  # ham marked as spam
+fn = 0  # spam missed
+
 for email, true_label in zip(emails, true_labels):
 
     tokens = tokenize_email(email)
@@ -157,18 +168,37 @@ for email, true_label in zip(emails, true_labels):
     if prediction == true_label_str:
         correct += 1
 
+    if prediction == "spam" and true_label_str == "spam":
+        tp += 1
+    elif prediction == "ham" and true_label_str == "ham":
+        tn += 1
+    elif prediction == "spam" and true_label_str == "ham":
+        fp += 1
+    elif prediction == "ham" and true_label_str == "spam":
+        fn += 1
+
 
 accuracy = correct / len(emails) * 100
+
+precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+
+if precision + recall > 0:
+    f1 = 2 * (precision * recall) / (precision + recall)
+else:
+    f1 = 0
 
 print(f"Total benchmark emails: {len(emails)}")
 print(f"Correct predictions: {correct}")
 print(f"Accuracy: {accuracy:.2f}%")
 
+print("\n--- Confusion Matrix ---")
+print(f"TP (Spam detected): {tp}")
+print(f"TN (Ham detected): {tn}")
+print(f"FP (Ham marked spam): {fp}")
+print(f"FN (Spam missed): {fn}")
 
-# -----------------------------
-# MODEL STATS
-# -----------------------------
-print("\n--- Model Stats ---")
-print(f"Vocabulary size: {len(vocabulary)}")
-print(f"Ham log-likelihood entries: {len(ham_log_likelihoods)}")
-print(f"Spam log-likelihood entries: {len(spam_log_likelihoods)}")
+print("\n--- Metrics ---")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")

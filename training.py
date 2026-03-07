@@ -9,6 +9,15 @@ spam_folder = "datasets/spams-data"
 ham_files = [os.path.join(ham_folder, f) for f in os.listdir(ham_folder) if f.endswith(".txt")]
 spam_files = [os.path.join(spam_folder, f) for f in os.listdir(spam_folder) if f.endswith(".txt")]
 
+STOPWORDS = {
+    "the","is","a","an","to","of","and","for","in","on","with","that","this",
+    "it","you","your","we","our","be","are","was","were","as","at","by","from",
+    "or","but","if","then","than","so","because","about","into","over","after",
+    "before","between","during","without","within","also","can","will","just",
+    "do","does","did","done","have","has","had","having","i","me","my","mine",
+    "he","him","his","she","her","they","them","their","theirs"
+}
+
 
 class EmailTrainer:
     def __init__(self, file_paths):
@@ -96,12 +105,12 @@ class EmailTrainer:
 
             email = re.sub(url_pattern, "<URL>", email)
 
-            # compress repeated letters
             email = re.sub(r"(.)\1{2,}", r"\1\1", email)
 
             tokens = re.findall(token_pattern, email)
 
             tokens = [self.normalize_word(t) for t in tokens]
+            tokens = [t for t in tokens if t not in STOPWORDS]
 
             tokens = self.merge_letter_sequences(tokens)
 
@@ -122,6 +131,17 @@ class EmailTrainer:
                 total_words += 1
 
         return word_counts, total_words
+
+    # ----------------------------
+    # Remove rare tokens
+    # ----------------------------
+    def prune_counts(self, word_counts, min_count=2):
+
+        return {
+            word: count
+            for word, count in word_counts.items()
+            if count >= min_count
+        }
 
     # ----------------------------
     # Compute log likelihoods
@@ -151,7 +171,12 @@ ham_trainer = EmailTrainer(ham_files)
 ham_trainer.load_emails()
 ham_trainer.tokenize()
 
-ham_counts, ham_total = ham_trainer.train_counts()
+ham_counts, _ = ham_trainer.train_counts()
+
+ham_counts = ham_trainer.prune_counts(ham_counts, min_count=2)
+
+ham_total = sum(ham_counts.values())
+
 
 # ----------------------------
 # Train SPAM model
@@ -162,13 +187,19 @@ spam_trainer = EmailTrainer(spam_files)
 spam_trainer.load_emails()
 spam_trainer.tokenize()
 
-spam_counts, spam_total = spam_trainer.train_counts()
+spam_counts, _ = spam_trainer.train_counts()
+
+spam_counts = spam_trainer.prune_counts(spam_counts, min_count=2)
+
+spam_total = sum(spam_counts.values())
+
 
 # ----------------------------
 # Vocabulary
 # ----------------------------
 
 vocabulary = set(ham_counts.keys()) | set(spam_counts.keys())
+
 
 # ----------------------------
 # Likelihoods
@@ -186,6 +217,7 @@ spam_log_likelihoods = spam_trainer.compute_log_likelihoods(
     vocabulary
 )
 
+
 # ----------------------------
 # Priors
 # ----------------------------
@@ -194,6 +226,7 @@ total_emails = len(ham_trainer.emails) + len(spam_trainer.emails)
 
 log_prior_ham = math.log(len(ham_trainer.emails) / total_emails)
 log_prior_spam = math.log(len(spam_trainer.emails) / total_emails)
+
 
 # ----------------------------
 # Save model
