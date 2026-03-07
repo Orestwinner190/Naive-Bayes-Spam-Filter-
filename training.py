@@ -80,15 +80,14 @@ class EmailTrainer:
 
         return merged
 
-    def add_bigrams(self, tokens):
-
-        bigrams = []
-
-        for i in range(len(tokens) - 1):
-            bigram = tokens[i] + "_" + tokens[i + 1]
-            bigrams.append(bigram)
-
-        return tokens + bigrams
+    def add_ngrams(self, tokens, n=3):
+        """Add bigrams and trigrams (or higher n-grams) to tokens."""
+        ngrams = []
+        for k in range(2, n + 1):  # 2=bigram, 3=trigram
+            for i in range(len(tokens) - k + 1):
+                ngram = "_".join(tokens[i:i + k])
+                ngrams.append(ngram)
+        return tokens + ngrams
 
     # ----------------------------
     # Tokenization pipeline
@@ -114,7 +113,7 @@ class EmailTrainer:
 
             tokens = self.merge_letter_sequences(tokens)
 
-            tokens = self.add_bigrams(tokens)
+            tokens = self.add_ngrams(tokens, n=4)
 
             self.tokens.append(tokens)
 

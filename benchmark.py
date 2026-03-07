@@ -107,15 +107,14 @@ def merge_letter_sequences(tokens):
 
     return merged
 
-def add_bigrams(tokens):
-
-    bigrams = []
-
-    for i in range(len(tokens) - 1):
-        bigram = tokens[i] + "_" + tokens[i+1]
-        bigrams.append(bigram)
-
-    return tokens + bigrams
+def add_ngrams(tokens, n=3):
+    """Add bigrams and trigrams (or higher n-grams) to tokens."""
+    ngrams = []
+    for k in range(2, n+1):  # 2=bigram, 3=trigram
+        for i in range(len(tokens) - k + 1):
+            ngram = "_".join(tokens[i:i+k])
+            ngrams.append(ngram)
+    return tokens + ngrams
 
 # -----------------------------
 # TOKENIZATION PIPELINE
@@ -137,7 +136,7 @@ def tokenize_email(email):
 
     tokens = merge_letter_sequences(tokens)
 
-    tokens = add_bigrams(tokens)
+    tokens = add_ngrams(tokens, n=3)
 
     return tokens
 
