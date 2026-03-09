@@ -2,6 +2,12 @@ import os
 import re
 import json
 
+STOPWORDS = {"a","an","the","and","or","but","if","then","else","of","in","on",
+             "at","by","for","from","with","to","into","onto","upon","is","are",
+             "was","were","be","been","being","do","does","did","have","has","had",
+             "this","that","these","those","it","its","as","than","so","such",
+             "because","while","although","about","against","between","during",
+             "before","after","above","below","again","further","once"}
 
 
 # -----------------------------
@@ -134,9 +140,13 @@ def tokenize_email(email):
 
     tokens = [normalize_word(t) for t in tokens]
 
+    tokens = [t for t in tokens if len(t) > 1]
+
+    tokens = [t for t in tokens if t not in STOPWORDS]
+
     tokens = merge_letter_sequences(tokens)
 
-    tokens = add_ngrams(tokens, n=3)
+    tokens = add_ngrams(tokens, n=4)
 
     return tokens
 
@@ -214,3 +224,8 @@ print("\n--- Metrics ---")
 print(f"Precision: {precision:.4f}")
 print(f"Recall: {recall:.4f}")
 print(f"F1 Score: {f1:.4f}")
+
+top = sorted(spam_log_likelihoods.items(), key=lambda x: x[1], reverse=True)[:50]
+
+for w, v in top:
+    print(w)

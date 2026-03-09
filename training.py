@@ -9,6 +9,13 @@ spam_folder = "datasets/spams-data"
 ham_files = [os.path.join(ham_folder, f) for f in os.listdir(ham_folder) if f.endswith(".txt")]
 spam_files = [os.path.join(spam_folder, f) for f in os.listdir(spam_folder) if f.endswith(".txt")]
 
+STOPWORDS = {"a","an","the","and","or","but","if","then","else","of","in","on",
+             "at","by","for","from","with","to","into","onto","upon","is","are",
+             "was","were","be","been","being","do","does","did","have","has","had",
+             "this","that","these","those","it","its","as","than","so","such",
+             "because","while","although","about","against","between","during",
+             "before","after","above","below","again","further","once"}
+
 
 class EmailTrainer:
     def __init__(self, file_paths):
@@ -111,6 +118,10 @@ class EmailTrainer:
 
             tokens = [self.normalize_word(t) for t in tokens]
 
+            tokens = [t for t in tokens if len(t) > 1]
+
+            tokens = [t for t in tokens if t not in STOPWORDS]
+
             tokens = self.merge_letter_sequences(tokens)
 
             tokens = self.add_ngrams(tokens, n=4)
@@ -144,6 +155,51 @@ class EmailTrainer:
             if count >= min_count
         }
 
+    def chi_square_feature_selection(self, other_tokens, top_k=200000):
+
+        from collections import defaultdict
+
+        spam_docs = len(self.tokens)
+        ham_docs = len(other_tokens)
+
+        spam_df = defaultdict(int)
+        ham_df = defaultdict(int)
+
+        for email in self.tokens:
+            for word in set(email):
+                spam_df[word] += 1
+
+        for email in other_tokens:
+            for word in set(email):
+                ham_df[word] += 1
+
+        vocabulary = set(spam_df) | set(ham_df)
+
+        scores = {}
+
+        for word in vocabulary:
+
+            A = spam_df.get(word, 0)
+            C = ham_df.get(word, 0)
+
+            B = spam_docs - A
+            D = ham_docs - C
+
+            N = A + B + C + D
+
+            denom = (A + C) * (B + D) * (A + B) * (C + D)
+
+            if denom == 0:
+                continue
+
+            chi2 = (N * (A * D - B * C) ** 2) / denom
+
+            scores[word] = chi2
+
+        top_features = sorted(scores, key=scores.get, reverse=True)[:top_k]
+
+        return set(top_features)
+
     # ----------------------------
     # Compute log likelihoods
     # ----------------------------
@@ -176,8 +232,6 @@ ham_counts, _ = ham_trainer.train_counts()
 
 ham_counts = ham_trainer.prune_counts(ham_counts, min_count=2)
 
-ham_total = sum(ham_counts.values())
-
 
 # ----------------------------
 # Train SPAM model
@@ -192,15 +246,20 @@ spam_counts, _ = spam_trainer.train_counts()
 
 spam_counts = spam_trainer.prune_counts(spam_counts, min_count=2)
 
-spam_total = sum(spam_counts.values())
-
 
 # ----------------------------
 # Vocabulary
 # ----------------------------
 
-vocabulary = set(ham_counts.keys()) | set(spam_counts.keys())
+vocabulary = spam_trainer.chi_square_feature_selection(
+    ham_trainer.tokens,
+    top_k=200000
+)
+ham_counts = {w:c for w,c in ham_counts.items() if w in vocabulary}
+spam_counts = {w:c for w,c in spam_counts.items() if w in vocabulary}
 
+ham_total = sum(ham_counts.values())
+spam_total = sum(spam_counts.values())
 
 # ----------------------------
 # Likelihoods
