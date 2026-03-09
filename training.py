@@ -9,13 +9,16 @@ spam_folder = "datasets/spams-data"
 ham_files = [os.path.join(ham_folder, f) for f in os.listdir(ham_folder) if f.endswith(".txt")]
 spam_files = [os.path.join(spam_folder, f) for f in os.listdir(spam_folder) if f.endswith(".txt")]
 
-STOPWORDS = {"a","an","the","and","or","but","if","then","else","of","in","on",
-             "at","by","for","from","with","to","into","onto","upon","is","are",
-             "was","were","be","been","being","do","does","did","have","has","had",
-             "this","that","these","those","it","its","as","than","so","such",
-             "because","while","although","about","against","between","during",
-             "before","after","above","below","again","further","once"}
-
+STOPWORDS = {
+    "a","an","the","and","or","but","if","then","else","of","in","on","at","by",
+    "for","from","with","to","into","onto","upon","is","are","was","were","be",
+    "been","being","do","does","did","have","has","had","this","that","these",
+    "those","it","its","as","than","so","such","because","while","although",
+    "about","against","between","during","before","after","above","below",
+    "again","further","once",
+    "you","your","we","our","i","my","me","us","will","can","no","not","all",
+    "one","out","just","may","here","more","any","get","now","new","only","please"
+}
 
 class EmailTrainer:
     def __init__(self, file_paths):
