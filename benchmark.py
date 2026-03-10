@@ -21,7 +21,10 @@ STOPWORDS = {
     "listmaster", "mailman", "listinfo", "unsubscribe","linux", "ilug", "listmaster", "irish", "users", "group",
     "multipart", "format", "plain", "windows", "type", "text",
     "base", "tbit", "tab", "decoration", "none", "multi", "part", "legal", "notice", "iso", "instead",
-    "go", "format", "type", "plain", "windows", "text"
+    "go", "format", "type", "plain", "windows", "text",
+    "com", "org", "net", "edu", "gov", "de", "uk", "ca", "au",
+    "inc", "re", "fw", "fwd", "pm", "am", "http", "www",
+    "align", "center", "index", "border", "valign", "htmlimg", "size", "u.s"
 }
 
 
@@ -173,6 +176,7 @@ def tokenize_email(email):
     tokens = [normalize_word(t) for t in tokens]
     tokens = [t for t in tokens if len(t) > 1]
     tokens = [t for t in tokens if t not in STOPWORDS]
+    tokens = [t for t in tokens if not (len(t) <= 3 and t.isalpha())]
     tokens = merge_letter_sequences(tokens)
     tokens = add_ngrams(tokens, n=4)
     tokens = [t for t in tokens if not any(
