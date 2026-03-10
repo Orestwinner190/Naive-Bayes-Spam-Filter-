@@ -16,7 +16,12 @@ STOPWORDS = {
     "enron","ect","hou","vince","kaminski","daren","hpl","corp",
     "escapenumber","escapelong","escapenumbermg",
     "td","tr","font","bgcolor","nbsp","href","img","width","height",
-    "style","pt","cc","subject","per"
+    "style","pt","cc","subject","per", "nextpart", "mime", "multipart", "content", "charset",
+    "transfer", "encoding", "quoted", "printable", "boundary",
+    "listmaster", "mailman", "listinfo", "unsubscribe","linux", "ilug", "listmaster", "irish", "users", "group",
+    "multipart", "format", "plain", "windows", "type", "text",
+    "base", "tbit", "tab", "decoration", "none", "multi", "part", "legal", "notice", "iso", "instead",
+    "go", "format", "type", "plain", "windows", "text"
 }
 
 
@@ -49,11 +54,12 @@ def is_garbage_token(token):
     alpha_chars = [c for c in token if c.isalpha()]
     digit_chars = [c for c in token if c.isdigit()]
 
-    # Reject if more than half the chars are digits
-    if len(token) > 1 and len(digit_chars) / len(token) > 0.5:
+    if len(token) > 1 and len(digit_chars) / len(token) > 0.3:
         return True
 
-    # Reject if 3+ alpha chars but none are real vowels
+    if len(token) <= 2 and any(c.isdigit() for c in token):
+        return True
+
     if len(alpha_chars) >= 3 and not any(c in vowels for c in alpha_chars):
         return True
 
@@ -160,7 +166,10 @@ def tokenize_email(email):
     email = re.sub(url_pattern, "<URL>", email)
     email = re.sub(r"(.)\1{2,}", r"\1\1", email)
     tokens = re.findall(token_pattern, email)
-    tokens = [t for t in tokens if not is_garbage_token(t)]  # ← no self
+    tokens = [t.strip("._-") for t in tokens]
+    tokens = [t for t in tokens if len(t) > 1]
+    tokens = [t for t in tokens if not ("." in t and not t.replace(".", "").isalpha())]  # ← ADD HERE
+    tokens = [t for t in tokens if not is_garbage_token(t)]
     tokens = [normalize_word(t) for t in tokens]
     tokens = [t for t in tokens if len(t) > 1]
     tokens = [t for t in tokens if t not in STOPWORDS]

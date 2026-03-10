@@ -23,7 +23,13 @@ STOPWORDS = {
     "enron","ect","hou","vince","kaminski","daren","hpl","corp",
     "escapenumber","escapelong","escapenumbermg",
     "td","tr","font","bgcolor","nbsp","href","img","width","height",
-    "style","pt","cc","subject","per"
+    "style","pt","cc","subject","per", "nextpart", "mime", "multipart", "content", "charset",
+    "transfer", "encoding", "quoted", "printable", "boundary",
+    "listmaster", "mailman", "listinfo", "unsubscribe",
+    "linux", "ilug", "listmaster", "irish", "users", "group",
+    "multipart", "format", "plain", "windows", "type", "text",
+    "base", "tbit", "tab", "decoration", "none", "multi", "part", "legal", "notice", "iso", "instead",
+    "go", "format", "type", "plain", "windows", "text"
 }
 
 
@@ -67,7 +73,10 @@ class EmailTrainer:
         digit_chars = [c for c in token if c.isdigit()]
 
         # Reject if more than half the chars are digits
-        if len(token) > 1 and len(digit_chars) / len(token) > 0.5:
+        if len(token) > 1 and len(digit_chars) / len(token) > 0.3:
+            return True
+
+        if len(token) <= 2 and any(c.isdigit() for c in token):
             return True
 
         # Reject if 3+ alpha chars but none are real vowels
@@ -144,6 +153,9 @@ class EmailTrainer:
             email = re.sub(url_pattern, "<URL>", email)
             email = re.sub(r"(.)\1{2,}", r"\1\1", email)
             tokens = re.findall(token_pattern, email)
+            tokens = [t.strip("._-") for t in tokens]
+            tokens = [t for t in tokens if len(t) > 1]
+            tokens = [t for t in tokens if not ("." in t and not t.replace(".", "").isalpha())]  # ← ADD HERE
             tokens = [t for t in tokens if not self.is_garbage_token(t)]
             tokens = [self.normalize_word(t) for t in tokens]
             tokens = [t for t in tokens if len(t) > 1]
@@ -173,7 +185,7 @@ class EmailTrainer:
     def prune_counts(self, word_counts, min_count=2):
         return {word: count for word, count in word_counts.items() if count >= min_count}
 
-    def chi_square_feature_selection(self, other_tokens, top_k=100000):
+    def chi_square_feature_selection(self, other_tokens, top_k=100000, min_ratio=0.3):
         from collections import defaultdict
 
         spam_docs = len(self.tokens)
@@ -205,7 +217,18 @@ class EmailTrainer:
             chi2 = (N * (A * D - B * C) ** 2) / denom
             scores[word] = chi2
 
-        top_features = sorted(scores, key=scores.get, reverse=True)[:top_k]
+        filtered = {}
+        for word, chi2 in scores.items():
+            spam_rate = spam_df.get(word, 0) / spam_docs
+            ham_rate = ham_df.get(word, 0) / ham_docs
+            if ham_rate == 0 or spam_rate == 0:
+                filtered[word] = chi2
+                continue
+            ratio = abs(math.log(spam_rate / ham_rate))
+            if ratio >= min_ratio:
+                filtered[word] = chi2
+
+        top_features = sorted(filtered, key=filtered.get, reverse=True)[:top_k]
         return set(top_features)
 
     # ----------------------------

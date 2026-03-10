@@ -1,39 +1,40 @@
+import csv
 import os
 
-# --------------------------
-# INPUT / OUTPUT FILES
-# --------------------------
-mixed_file = "datasets/benchmark-testing/benchmark_emails.txt"  # path to your mixed dataset
-ham_file = "datasets/hams-data/ham5.txt"
-spam_file = "datasets/spams-data/spam5.txt"
+input_file = r"C:\Users\ortso\Desktop\Git projects\Spam filter\datasets\hamspam3.csv"
+spam_output = r"C:\Users\ortso\Desktop\Git projects\Spam filter\datasets\spams-data\spam4-trial.txt"
+ham_output = r"C:\Users\ortso\Desktop\Git projects\Spam filter\datasets\hams-data\ham4-trial.txt"
 
-# Ensure output directories exist
-os.makedirs(os.path.dirname(ham_file), exist_ok=True)
-os.makedirs(os.path.dirname(spam_file), exist_ok=True)
+spam_count = 0
+ham_count = 0
+skipped = 0
 
-# --------------------------
-# PROCESSING
-# --------------------------
-with open(mixed_file, "r", encoding="latin-1") as f, \
-     open(ham_file, "w", encoding="latin-1") as ham_out, \
-     open(spam_file, "w", encoding="latin-1") as spam_out:
+csv.field_size_limit(10_000_000)  # ← ADD THIS
 
-    for line in f:
-        line = line.strip()
-        if not line:
+with open(input_file, "r", encoding="utf-8", errors="ignore") as f, \
+     open(spam_output, "w", encoding="latin-1", errors="ignore") as spam_out, \
+     open(ham_output, "w", encoding="latin-1", errors="ignore") as ham_out:
+
+    reader = csv.reader(f)
+    next(reader)  # skip header row
+
+    for row in reader:
+        if len(row) < 2:
+            skipped += 1
             continue
 
-        # Assume label is the last character after a space
-        if line[-1] in ("0", "1") and line[-2].isspace():
-            email_text = line[:-2].strip()  # everything before the space+label
-            label = line[-1]
+        label = row[0].strip().lower()
+        body = " ".join(row[1].split())
 
-            if label == "0":
-                ham_out.write(email_text + "\n")
-            elif label == "1":
-                spam_out.write(email_text + "\n")
-        else:
-            # fallback for malformed lines
+        if len(body) < 50:
+            skipped += 1
             continue
 
-print("Done! Emails sorted into ham5.txt and spam5.txt")
+        if label == "spam":
+            spam_out.write(body + "\n")
+            spam_count += 1
+        elif label == "ham":
+            ham_out.write(body + "\n")
+            ham_count += 1
+
+print(f"Done — {spam_count} spam, {ham_count} ham written, {skipped} skipped")
